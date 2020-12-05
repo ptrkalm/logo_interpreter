@@ -15,7 +15,7 @@ enum Token {
 #[derive(Debug)]
 enum Expression {
     Program(Vec<Expression>),
-    Repeat(i32, Vec<Expression>),
+    Repeat(Box<Expression>, Vec<Expression>),
     Forward(Box<Expression>),
     Right(Box<Expression>),
     Number(i32),
@@ -50,14 +50,26 @@ fn main() {
     }
 
     println!("{:?}", tokens);
-    let wtf = eval(&mut tokens,);
-    println!("{:?}", wtf);
+    let mut exps = vec!();
+    while !tokens.is_empty() {
+        exps.push(eval(&mut tokens));
+    }
+    println!("{:?}", exps);
 }
 
 fn eval(tokens: &mut VecDeque<Token>) -> Expression {
     match tokens.pop_front().unwrap() {
+        Token::Repeat => {
+            Expression::Repeat(
+                Box::new(eval(tokens)),
+                vec!(eval(tokens))
+            )
+        }
         Token::Forward => {
             Expression::Forward(Box::new(eval(tokens)))
+        },
+        Token::Right => {
+            Expression::Right(Box::new(eval(tokens)))
         },
         Token::Number(x) => {
             Expression::Number(x)
@@ -67,4 +79,4 @@ fn eval(tokens: &mut VecDeque<Token>) -> Expression {
 }
 
 const SQUARE_CODE: &str = 
-"forward 50";
+"repeat 5 forward 50 right 90";
