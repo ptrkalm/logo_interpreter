@@ -20,6 +20,7 @@ enum Token {
 enum Expression {
     Repeat(Box<Expression>, Vec<Expression>),
     To(Box<Expression>, Vec<Expression>, Vec<Expression>),
+    Call(Box<Expression>, Vec<Expression>),
     Forward(Box<Expression>),
     Right(Box<Expression>),
     Number(i32),
@@ -55,7 +56,6 @@ fn main() {
         });
     }
 
-    println!("{:?}", tokens);
     let exps = eval(&mut tokens);
     println!("{:?}", exps);
 }
@@ -65,33 +65,17 @@ fn eval(tokens: &mut VecDeque<Token>) -> Vec<Expression> {
 
     while !tokens.is_empty() {
         match tokens.pop_front().unwrap() {
-            Token::Arg(x) => {
-                exps.push(Expression::Arg(x))
-            },
-            Token::Repeat => {
-                exps.push(eval_repeat(tokens));
-            },
-            Token::To => {
-                exps.push(eval_to(tokens))
-            }
-            Token::End => {
-                break;
-            }
-            Token::Forward => {
-                exps.push(Expression::Forward(Box::new(eval_number(tokens))));
-            },
-            Token::Right => {
-                exps.push(Expression::Right(Box::new(eval_number(tokens))));
-            },
-            Token::Number(x) => {
-                exps.push(Expression::Number(x));
-            },
-            Token::Ident(x) => {
-                exps.push(Expression::Ident(x));
-            },
-            Token::LBracket => {},
-            Token::RBracket => { break; },
-            _ => { println!("Error") }
+            Token::Arg(x)    => exps.push(Expression::Arg(x)),
+            Token::Repeat    => exps.push(eval_repeat(tokens)),
+            Token::To        => exps.push(eval_to(tokens)),
+            Token::End       => break,
+            Token::Forward   => exps.push(Expression::Forward(Box::new(eval_number(tokens)))),
+            Token::Right     => exps.push(Expression::Right(Box::new(eval_number(tokens)))),
+            Token::Number(x) => exps.push(Expression::Number(x)),
+            Token::Ident(x)  => exps.push(eval_call(tokens, x)),
+            Token::LBracket  => {},
+            Token::RBracket  => break,
+            _                => println!("Error")
         };
     }
 
@@ -106,44 +90,49 @@ fn eval_repeat(tokens: &mut VecDeque<Token>) -> Expression {
 }
 
 fn eval_to(tokens: &mut VecDeque<Token>) -> Expression {
-    let ident = Box::new(eval_ident(tokens));
+    let ident = Box::new(eval_name(tokens));
     let mut args = vec!();
     
     loop {
-        let next = tokens.pop_front().unwrap();
-        match next {
-            Token::Arg(x) => args.push(Expression::Arg(x)),
-            _             => break
+        match tokens.get(0) {
+            Some(Token::Arg(x)) => args.push(Expression::Arg(x.to_string())),
+            _                   => break
         };
+        tokens.pop_front();
     }
 
     Expression::To(ident, args, eval(tokens))
 }
 
 fn eval_number(tokens: &mut VecDeque<Token>) -> Expression {
-    match tokens.pop_front().unwrap() {
-        Token::Number(x) => {
-            Expression::Number(x)
-        },
-        Token::Arg(x) => {
-            Expression::Arg(x)
-        }
-        _ => {
-            panic!("Unexpected token! Expected: Number.");
-        }
+    match tokens.pop_front() {
+        Some(Token::Number(x)) => Expression::Number(x),
+        Some(Token::Arg(x))    => Expression::Arg(x),
+        _                      =>  panic!("Unexpected token! Expected: Number.")
     } 
 }
 
-fn eval_ident(tokens: &mut VecDeque<Token>) -> Expression {
-    match tokens.pop_front().unwrap() {
-        Token::Ident(x) => {
-            Expression::Ident(x)
-        },
-        _ => {
-            panic!("Unexpected token! Expected: Indent.")
-        }
+fn eval_name(tokens: &mut VecDeque<Token>) -> Expression {
+    match tokens.pop_front() {
+        Some(Token::Ident(x)) => Expression::Ident(x),
+        _                     => panic!("Unexpected token! Expected: Indent.")
     }
 }
 
+fn eval_call(tokens: &mut VecDeque<Token>, name: String) -> Expression {
+    let mut args = vec!();
+    
+    loop {
+        match tokens.get(0) {
+            Some(Token::Arg(x))    => args.push(Expression::Arg(x.to_string())),
+            Some(Token::Number(x)) => args.push(Expression::Number(*x)),
+            _             => break
+        }
+        tokens.pop_front();
+    }
+
+    Expression::Call(Box::new(Expression::Ident(name)), args)
+}
+
 const SQUARE_CODE: &str = 
-"to rect :arg1 :arg2 repeat 2 [forward :arg1 right 90 forward :arg2 right 90] end";
+"to rect :arg1 :arg2 repeat 2 [forward :arg1 right 90 forward :arg2 right 90] end rect 10 20 forward 20";
