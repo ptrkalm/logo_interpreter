@@ -30,7 +30,7 @@ enum Expression {
 
 fn main() {
     let mut tokens: VecDeque<Token> = VecDeque::new();
-    let regex = Regex::new(r"\[|\]|[:a-zA-Z0-9]+|[0-9]*").unwrap();
+    let regex = Regex::new(r"\[|\]|:*[a-zA-Z0-9]+|[0-9]+").unwrap();
     for token in regex.find_iter(SQUARE_CODE).map(|x| x.as_str()) {
         tokens.push_back(match token { 
             "repeat"  => Token::Repeat,
@@ -56,24 +56,22 @@ fn main() {
         });
     }
 
-    let exps = eval(&mut tokens);
+    let exps = build(&mut tokens);
     println!("{:?}", exps);
 }
 
-fn eval(tokens: &mut VecDeque<Token>) -> Vec<Expression> {
+fn build(tokens: &mut VecDeque<Token>) -> Vec<Expression> {
     let mut exps = vec!();
 
     while !tokens.is_empty() {
         match tokens.pop_front().unwrap() {
-            Token::Arg(x)    => exps.push(Expression::Arg(x)),
-            Token::Repeat    => exps.push(eval_repeat(tokens)),
-            Token::To        => exps.push(eval_to(tokens)),
+            Token::Repeat    => exps.push(build_repeat(tokens)),
+            Token::To        => exps.push(build_to(tokens)),
             Token::End       => break,
-            Token::Forward   => exps.push(Expression::Forward(Box::new(eval_number(tokens)))),
-            Token::Right     => exps.push(Expression::Right(Box::new(eval_number(tokens)))),
+            Token::Forward   => exps.push(Expression::Forward(Box::new(build_arg(tokens)))),
+            Token::Right     => exps.push(Expression::Right(Box::new(build_arg(tokens)))),
             Token::Number(x) => exps.push(Expression::Number(x)),
-            Token::Ident(x)  => exps.push(eval_call(tokens, x)),
-            Token::LBracket  => {},
+            Token::Ident(x)  => exps.push(build_call(tokens, x)),
             Token::RBracket  => break,
             _                => println!("Error")
         };
@@ -82,15 +80,19 @@ fn eval(tokens: &mut VecDeque<Token>) -> Vec<Expression> {
     exps
 }
 
-fn eval_repeat(tokens: &mut VecDeque<Token>) -> Expression {
-    Expression::Repeat(
-        Box::new(eval_number(tokens)),
-        eval(tokens)
-    )
+fn build_repeat(tokens: &mut VecDeque<Token>) -> Expression {
+    let count = Box::new(build_arg(tokens));
+    match tokens.pop_front() {
+        Some(x) => match x {
+            Token::LBracket => Expression::Repeat(count, build(tokens)),
+            _               => panic!("Unexpected token '{:?}'. Expected '['", x)
+        },
+        None    => panic!("Expected '['. Got nothing")
+    }
 }
 
-fn eval_to(tokens: &mut VecDeque<Token>) -> Expression {
-    let ident = Box::new(eval_name(tokens));
+fn build_to(tokens: &mut VecDeque<Token>) -> Expression {
+    let ident = Box::new(build_name(tokens));
     let mut args = vec!();
     
     loop {
@@ -101,10 +103,10 @@ fn eval_to(tokens: &mut VecDeque<Token>) -> Expression {
         tokens.pop_front();
     }
 
-    Expression::To(ident, args, eval(tokens))
+    Expression::To(ident, args, build(tokens))
 }
 
-fn eval_number(tokens: &mut VecDeque<Token>) -> Expression {
+fn build_arg(tokens: &mut VecDeque<Token>) -> Expression {
     match tokens.pop_front() {
         Some(Token::Number(x)) => Expression::Number(x),
         Some(Token::Arg(x))    => Expression::Arg(x),
@@ -112,14 +114,14 @@ fn eval_number(tokens: &mut VecDeque<Token>) -> Expression {
     } 
 }
 
-fn eval_name(tokens: &mut VecDeque<Token>) -> Expression {
+fn build_name(tokens: &mut VecDeque<Token>) -> Expression {
     match tokens.pop_front() {
         Some(Token::Ident(x)) => Expression::Ident(x),
         _                     => panic!("Unexpected token! Expected: Indent.")
     }
 }
 
-fn eval_call(tokens: &mut VecDeque<Token>, name: String) -> Expression {
+fn build_call(tokens: &mut VecDeque<Token>, name: String) -> Expression {
     let mut args = vec!();
     
     loop {
@@ -134,5 +136,15 @@ fn eval_call(tokens: &mut VecDeque<Token>, name: String) -> Expression {
     Expression::Call(Box::new(Expression::Ident(name)), args)
 }
 
-const SQUARE_CODE: &str = 
-"to rect :arg1 :arg2 repeat 2 [forward :arg1 right 90 forward :arg2 right 90] end rect 10 20 forward 20";
+const SQUARE_CODE: &str = "
+to rect :arg1 :arg2 
+    repeat 2 [
+        forward :arg1
+        right 90
+        forward :arg2
+        right 90
+    ]
+end 
+rect 10 20
+forward 20
+";
