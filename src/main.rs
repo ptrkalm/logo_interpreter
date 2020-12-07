@@ -16,15 +16,8 @@ enum Token {
     Ident(String),
     Var(String),
     If,
-    Eq,
-    NotEq,
     Gtr,
-    GtrEq,
     Less,
-    LessEq,
-    Not,
-    Or,
-    And
 }
 
 #[derive(Debug)]
@@ -58,15 +51,8 @@ fn main() {
             "to"      => Token::To,
             "end"     => Token::End,
             "if"      => Token::If,
-            "=="      => Token::Eq,
-            "!="      => Token::NotEq,
             ">"       => Token::Gtr,
-            ">="      => Token::GtrEq,
             "<"       => Token::Less,
-            "<="      => Token::LessEq,
-            "!"       => Token::Not,
-            "or"      => Token::Or,
-            "and"     => Token::And,
             _         => {
                 match token.parse::<i32>() {
                     Ok(n) => Token::Number(n),
@@ -82,25 +68,33 @@ fn main() {
         });
     }
 
-    let exps = build(&mut tokens);
+    let mut stack: VecDeque<Token> = VecDeque::new();
+    let exps = build(&mut tokens, &mut stack);
+    match stack.pop_back() {
+        Some(Token::LBracket) => panic!("Expected closing token ']'."),
+        Some(Token::To)       => panic!("Expected closing token 'end'."),
+        _                     => {}
+    }
     println!("{:?}", exps);
+    println!("{:?}", stack);
 }
 
-fn build(tokens: &mut VecDeque<Token>) -> Vec<Expression> {
+fn build(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Vec<Expression> {
     let mut exps = vec!();
 
     while !tokens.is_empty() {
-        match tokens.pop_front().unwrap() {
+        let next = tokens.pop_front().unwrap();
+        match next {
             Token::Forward   => exps.push(Expression::Forward(Box::new(build_var(tokens)))),
             Token::Back      => exps.push(Expression::Back(Box::new(build_var(tokens)))),
             Token::Right     => exps.push(Expression::Right(Box::new(build_var(tokens)))),
             Token::Left      => exps.push(Expression::Left(Box::new(build_var(tokens)))),
-            Token::Repeat    => exps.push(build_repeat(tokens)),
-            Token::RBracket  => break,
-            Token::To        => exps.push(build_to(tokens)),
-            Token::End       => break,
+            Token::Repeat    => exps.push(build_repeat(tokens, stack)),
+            Token::RBracket  => pop_stack(Token::LBracket, Token::RBracket, stack),
+            Token::To        => exps.push(build_to(tokens, stack)),
+            Token::End       => pop_stack(Token::To, Token::End, stack),
             Token::Ident(x)  => exps.push(build_call(tokens, x)),
-            _                => println!("Error")
+            _                => panic!("Unexpected token '{:?}'", next)
         };
     }
 
@@ -116,29 +110,28 @@ fn build_var(tokens: &mut VecDeque<Token>) -> Expression {
     } 
 }
 
-fn build_repeat(tokens: &mut VecDeque<Token>) -> Expression {
+fn build_repeat(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Expression {
     let count = Box::new(build_var(tokens));
+    stack.push_back(Token::LBracket);
     match tokens.pop_front() {
-        Some(Token::LBracket) => Expression::Repeat(count, build(tokens)),
+        Some(Token::LBracket) => Expression::Repeat(count, build(tokens, stack)),
         Some(x)               => panic!("Unexpected token '{:?}'. Expected '['", x),
         None                  => panic!("Expected '[', got nothing.")
     }
 }
 
-fn build_to(tokens: &mut VecDeque<Token>) -> Expression {
+fn build_to(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Expression {
     let ident = Box::new(build_name(tokens));
+    stack.push_back(Token::To);
     let mut args = vec!();
-    
     loop {
         match tokens.get(0) {
             Some(Token::Var(x)) => args.push(Expression::Var(x.to_string())),
-            //TODO catching unexpected tokens
             _                   => break
         };
         tokens.pop_front();
     }
-
-    Expression::To(ident, args, build(tokens))
+    Expression::To(ident, args, build(tokens, stack))
 }
 
 fn build_name(tokens: &mut VecDeque<Token>) -> Expression {
@@ -164,7 +157,19 @@ fn build_call(tokens: &mut VecDeque<Token>, name: String) -> Expression {
     Expression::Call(Box::new(Expression::Ident(name)), args)
 }
 
-const SQUARE_CODE: &str = "
+fn pop_stack(open: Token, close: Token, stack: &mut VecDeque<Token>) {
+    match stack.pop_back() {
+        Some(token)  => {
+            match token == open {
+                true  => {},
+                false => panic!("Expected opening token '{:?}' before '{:?}'.", open, close)
+            }
+        },
+        None         => panic!("Expected opening token '{:?}' before '{:?}'.", open, close)
+    }
+}
+
+const SQUARE_CODE: &str ="
 to rect :arg1 :arg2
     repeat 2 [
         forward :arg1
@@ -172,9 +177,8 @@ to rect :arg1 :arg2
         forward :arg2
         right 90
     ]
-end 
+end
 rect 10 20
-forward 20
 ";
 
 /*[
