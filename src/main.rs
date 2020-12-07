@@ -8,6 +8,7 @@ enum Token {
     To, End,
     Number(i32), Ident(String), Var(String),
     If, Gtr, Less,
+    Add, Sub, Mul, Div
 }
 
 #[derive(Debug)]
@@ -28,13 +29,14 @@ enum Expression {
     If(Box<Expression>, Vec<Expression>),
     Condition(Box<Expression>, Box<Expression>, Box<Expression>),
     
-    Less,
-    Gtr
+    Math(Box<Expression>, Box<Expression>, Box<Expression>),
+    Less, Gtr,
+    Add, Sub, Mul, Div
 }
 
 fn main() {
     let mut tokens: VecDeque<Token> = VecDeque::new();
-    let regex = Regex::new(r":*[a-zA-Z0-9]+|[0-9]+|\[|\]|(<=|<|>=|>|==|!=|!)").unwrap();
+    let regex = Regex::new(r":*[a-zA-Z0-9]+|[0-9]+|(\[|\]|<|>|\+|-|\*)").unwrap();
     for token in regex.find_iter(SQUARE_CODE).map(|x| x.as_str()) {
         tokens.push_back(match token { 
             "forward" => Token::Forward,
@@ -49,6 +51,10 @@ fn main() {
             "if"      => Token::If,
             ">"       => Token::Gtr,
             "<"       => Token::Less,
+            "+"       => Token::Add,
+            "-"       => Token::Sub,
+            "*"       => Token::Mul,
+            "/"       => Token::Div,
             _         => {
                 match token.parse::<i32>() {
                     Ok(n) => Token::Number(n),
@@ -81,10 +87,10 @@ fn build(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Vec<Expre
     while !tokens.is_empty() {
         let next = tokens.pop_front().unwrap();
         match next {
-            Token::Forward   => exps.push(Expression::Forward(Box::new(build_var(tokens)))),
-            Token::Back      => exps.push(Expression::Back   (Box::new(build_var(tokens)))),
-            Token::Right     => exps.push(Expression::Right  (Box::new(build_var(tokens)))),
-            Token::Left      => exps.push(Expression::Left   (Box::new(build_var(tokens)))),
+            Token::Forward   => exps.push(Expression::Forward(Box::new(build_arg(tokens)))),
+            Token::Back      => exps.push(Expression::Back   (Box::new(build_arg(tokens)))),
+            Token::Right     => exps.push(Expression::Right  (Box::new(build_arg(tokens)))),
+            Token::Left      => exps.push(Expression::Left   (Box::new(build_arg(tokens)))),
             Token::Repeat    => exps.push(build_repeat(tokens, stack)),
             Token::If        => exps.push(build_if    (tokens, stack)),
             Token::To        => exps.push(build_to    (tokens, stack)),
@@ -107,8 +113,26 @@ fn build_var(tokens: &mut VecDeque<Token>) -> Expression {
     } 
 }
 
+fn build_arg(tokens: &mut VecDeque<Token>) -> Expression {
+    let op = tokens.get(1);
+    match op {
+        Some(Token::Add) => build_math(tokens, Box::new(Expression::Add)),
+        Some(Token::Sub) => build_math(tokens, Box::new(Expression::Sub)),
+        Some(Token::Mul) => build_math(tokens, Box::new(Expression::Mul)),
+        Some(Token::Div) => build_math(tokens, Box::new(Expression::Div)),
+        _                => build_var(tokens)
+    }
+}
+
+fn build_math(tokens: &mut VecDeque<Token>, op: Box<Expression>) -> Expression {
+    let lhs = Box::new(build_var(tokens));
+    tokens.pop_front();
+    let rhs = Box::new(build_var(tokens));
+
+    Expression::Math(lhs, op, rhs)
+}
 fn build_repeat(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Expression {
-    let count = Box::new(build_var(tokens));
+    let count = Box::new(build_arg(tokens));
     stack.push_back(Token::LBracket);
     match tokens.pop_front() {
         Some(Token::LBracket) => Expression::Repeat(count, build(tokens, stack)),
@@ -129,9 +153,9 @@ fn build_if(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Expres
 
 fn build_condition(tokens: &mut VecDeque<Token>) -> Expression {
     Expression::Condition(
-        Box::new(build_var(tokens)),
+        Box::new(build_arg(tokens)),
         Box::new(build_logical_op(tokens)),
-        Box::new(build_var(tokens))
+        Box::new(build_arg(tokens))
     )
 }
 
@@ -195,7 +219,7 @@ fn pop_stack(open: Token, close: Token, stack: &mut VecDeque<Token>) {
 
 const SQUARE_CODE: &str ="
 to rect :arg1 :arg2
-    if 5 > 3 [
+    if :arg1 * 2 > :arg2 [
         repeat 2 [
             forward :arg1
             right 90
@@ -214,36 +238,11 @@ rect 10 20
         [Var(":arg1"), Var(":arg2")],
         [
             If(
-                Condition(Number(5), Gtr, Number(3)),
-                [
-                    Repeat(
-                        Number(2),
-                        [
-                            Forward(Var(":arg1")),
-                            Right(Number(90)),
-                            Forward(Var(":arg2")),
-                            Right(Number(90)),
-                            Call(
-                                Ident("rect"),
-                                [Number(10), Number(20)]
-                            )
-                        ]
-                    )
-                ]
-            )
-        ]
-    )
-]
-*/
-
-/*
-[
-    To(
-        Ident("rect"),
-        [Var(":arg1"), Var(":arg2")],
-        [
-            If(
-                Condition(Number(5), Gtr, Number(3)),
+                Condition(
+                    Math(Var(":arg1"), Mul, Number(2)),
+                    Gtr,
+                    Var(":arg2")
+                ),
                 [
                     Repeat(
                         Number(2),
