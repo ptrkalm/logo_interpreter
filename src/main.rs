@@ -3,21 +3,11 @@ use std::collections::VecDeque;
 
 #[derive(Debug, PartialEq)]
 enum Token {
-    Forward,
-    Back,
-    Right,
-    Left,
-    Repeat,
-    LBracket,
-    RBracket,
-    To,
-    End,
-    Number(i32),
-    Ident(String),
-    Var(String),
-    If,
-    Gtr,
-    Less,
+    Forward, Back, Right,Left,
+    Repeat, LBracket, RBracket,
+    To, End,
+    Number(i32), Ident(String), Var(String),
+    If, Gtr, Less,
 }
 
 #[derive(Debug)]
@@ -33,7 +23,13 @@ enum Expression {
     
     Number(i32),
     Ident(String),
-    Var(String)
+    Var(String),
+
+    If(Box<Expression>, Vec<Expression>),
+    Condition(Box<Expression>, Box<Expression>, Box<Expression>),
+    
+    Less,
+    Gtr
 }
 
 fn main() {
@@ -86,14 +82,15 @@ fn build(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Vec<Expre
         let next = tokens.pop_front().unwrap();
         match next {
             Token::Forward   => exps.push(Expression::Forward(Box::new(build_var(tokens)))),
-            Token::Back      => exps.push(Expression::Back(Box::new(build_var(tokens)))),
-            Token::Right     => exps.push(Expression::Right(Box::new(build_var(tokens)))),
-            Token::Left      => exps.push(Expression::Left(Box::new(build_var(tokens)))),
+            Token::Back      => exps.push(Expression::Back   (Box::new(build_var(tokens)))),
+            Token::Right     => exps.push(Expression::Right  (Box::new(build_var(tokens)))),
+            Token::Left      => exps.push(Expression::Left   (Box::new(build_var(tokens)))),
             Token::Repeat    => exps.push(build_repeat(tokens, stack)),
-            Token::RBracket  => pop_stack(Token::LBracket, Token::RBracket, stack),
-            Token::To        => exps.push(build_to(tokens, stack)),
-            Token::End       => pop_stack(Token::To, Token::End, stack),
-            Token::Ident(x)  => exps.push(build_call(tokens, x)),
+            Token::If        => exps.push(build_if    (tokens, stack)),
+            Token::To        => exps.push(build_to    (tokens, stack)),
+            Token::Ident(x)  => exps.push(build_call  (tokens, x)),
+            Token::RBracket  => { pop_stack(Token::LBracket, Token::RBracket, stack); break },
+            Token::End       => { pop_stack(Token::To      , Token::End     , stack); break },
             _                => panic!("Unexpected token '{:?}'", next)
         };
     }
@@ -115,8 +112,35 @@ fn build_repeat(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Ex
     stack.push_back(Token::LBracket);
     match tokens.pop_front() {
         Some(Token::LBracket) => Expression::Repeat(count, build(tokens, stack)),
-        Some(x)               => panic!("Unexpected token '{:?}'. Expected '['", x),
+        Some(other)           => panic!("Unexpected token '{:?}'. Expected '['", other),
         None                  => panic!("Expected '[', got nothing.")
+    }
+}
+
+fn build_if(tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Expression {
+    let condition = Box::new(build_condition(tokens));
+    stack.push_back(Token::LBracket);
+    match tokens.pop_front() {
+        Some(Token::LBracket) => Expression::If(condition, build(tokens, stack)),
+        Some(other)           => panic!("Unexpected token '{:?}'. Expected '['", other),
+        None                  => panic!("Expected '[', got nothing.")
+    }
+}
+
+fn build_condition(tokens: &mut VecDeque<Token>) -> Expression {
+    Expression::Condition(
+        Box::new(build_var(tokens)),
+        Box::new(build_logical_op(tokens)),
+        Box::new(build_var(tokens))
+    )
+}
+
+fn build_logical_op(tokens: &mut VecDeque<Token>) -> Expression {
+    match tokens.pop_front() {
+        Some(Token::Less) => Expression::Less, 
+        Some(Token::Gtr)  => Expression::Gtr,
+        Some(other)       => panic!("Unexpected token '{:?}'. Expected logical operator.", other),
+        None              => panic!("Expected logical operator, got nothing.") 
     }
 }
 
@@ -171,34 +195,68 @@ fn pop_stack(open: Token, close: Token, stack: &mut VecDeque<Token>) {
 
 const SQUARE_CODE: &str ="
 to rect :arg1 :arg2
-    repeat 2 [
-        forward :arg1
-        right 90
-        forward :arg2
-        right 90
+    if 5 > 3 [
+        repeat 2 [
+            forward :arg1
+            right 90
+            forward :arg2
+            right 90
+        ]
     ]
 end
 rect 10 20
 ";
 
-/*[
+/*
+[
     To(
         Ident("rect"),
         [Var(":arg1"), Var(":arg2")],
-        [Repeat(
-            Number(2),
-            [
-                Forward(Var(":arg1")),
-                Right(Number(90)),
-                Forward(Var(":arg2")),
-                Right(Number(90))
-            ]
-        )]
-    ),
-    Call(
-        Ident("rect"),
-        [Number(10), Number(20)]
-    ),
-    Forward(Number(20))
+        [
+            If(
+                Condition(Number(5), Gtr, Number(3)),
+                [
+                    Repeat(
+                        Number(2),
+                        [
+                            Forward(Var(":arg1")),
+                            Right(Number(90)),
+                            Forward(Var(":arg2")),
+                            Right(Number(90)),
+                            Call(
+                                Ident("rect"),
+                                [Number(10), Number(20)]
+                            )
+                        ]
+                    )
+                ]
+            )
+        ]
+    )
 ]
+*/
+
+/*
+[
+    To(
+        Ident("rect"),
+        [Var(":arg1"), Var(":arg2")],
+        [
+            If(
+                Condition(Number(5), Gtr, Number(3)),
+                [
+                    Repeat(
+                        Number(2),
+                        [
+                            Forward(Var(":arg1")),
+                            Right(Number(90)),
+                            Forward(Var(":arg2")),
+                            Right(Number(90))
+                        ]
+                    )
+                ]
+            )
+        ]
+    ),
+    Call(Ident("rect"), [Number(10), Number(20)])]
 */
