@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 regex = "*"
+image = "*"
+imageproc = "*"
