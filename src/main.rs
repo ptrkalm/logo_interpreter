@@ -3,10 +3,10 @@ use turtle::Turtle;
 
 fn main() {
     let mut turtle = Turtle::new();
-    turtle.run(LINE_CODE);
+    turtle.run(_IF);
 }
 
-const _SQUARE_CODE: &str ="
+const _TO_RECT: &str = "
 to rect :arg1 :arg2
     if :arg1 * 2 > :arg2 [
         repeat 2 [
@@ -20,8 +20,22 @@ end
 rect 10 20
 ";
 
-const LINE_CODE: &str = "
+const _FORWARD: &str = "
 forward 100
+";
+
+const _REPEAT: &str = "
+repeat 4 [
+    forward 20
+]
+";
+
+const _IF: &str = "
+if 5 < 10 [
+    repeat 4 [
+        forward 20
+    ]
+]
 ";
 
 /*

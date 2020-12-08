@@ -13,7 +13,7 @@ pub struct Turtle {
     interpreter: Interpreter,
     executor:    Executor,
     image:       RgbImage,
-    position:    (f32, f32)    
+    position:    (f32, f32)
 }
 
 impl Turtle {
@@ -28,7 +28,9 @@ impl Turtle {
 
     pub fn run(&mut self, code: &str) {
         let ast = self.interpreter.run(code);
+        println!("{:?}", ast);
         self.clone().executor.run(ast, self);
+        self.image.save("output.jpg").unwrap();
     }
 
     fn forward(&mut self, n: f32) {
@@ -38,5 +40,6 @@ impl Turtle {
             (self.position.0, self.position.1 - n),
             Rgb([255, 255, 255])
         );
+        self.position = (self.position.0, self.position.1 - n);
     }
 }
