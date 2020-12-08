@@ -152,12 +152,12 @@ impl Interpreter {
     }
     
     fn build_to(&self, tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Expression {
-        let ident = Box::new(self.build_name(tokens));
+        let ident = self.build_name(tokens);
         stack.push_back(Token::To);
         let mut args = vec!();
         loop {
             match tokens.get(0) {
-                Some(Token::Var(x)) => args.push(Expression::Var(x.to_string())),
+                Some(Token::Var(x)) => args.push(x.to_string()),
                 _                   => break
             };
             tokens.pop_front();
@@ -165,9 +165,9 @@ impl Interpreter {
         Expression::To(ident, args, self.build(tokens, stack))
     }
     
-    fn build_name(&self, tokens: &mut VecDeque<Token>) -> Expression {
+    fn build_name(&self, tokens: &mut VecDeque<Token>) -> String {
         match tokens.pop_front() {
-            Some(Token::Ident(x)) => Expression::Ident(x),
+            Some(Token::Ident(x)) => x,
             Some(x)               => panic!("Unexpected token '{:?}'. Expected identifier.", x),
             None                  => panic!("Expected identifier, got nothing.")
         }
@@ -185,7 +185,7 @@ impl Interpreter {
             tokens.pop_front();
         }
     
-        Expression::Call(Box::new(Expression::Ident(name)), args)
+        Expression::Call(name, args)
     }
     
     fn pop_stack(&self, open: Token, close: Token, stack: &mut VecDeque<Token>) {

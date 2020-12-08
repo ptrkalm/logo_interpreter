@@ -16,7 +16,7 @@ impl Executor {
                         Expression::Number(n) => turtle.forward(n),
                         //TODO processing vars
                         _                     => {}
-                    }
+                    };
                 },
                 Expression::Repeat(count, exp) => {
                     if let Expression::Number(n) = *count {
@@ -27,9 +27,15 @@ impl Executor {
                 },
                 Expression::If(condition, exp) => {
                     if self.eval_condition(*condition) {
-                        self.run(exp, turtle)
+                        self.run(exp, turtle);
                     }
-                }
+                },
+                Expression::To(id, args, exp)  => {
+                    turtle.add_function(id, Function::new(args, exp));
+                },
+                Expression::Call(id, args)     => {
+                    turtle.call_function(id, args);
+                },
                 _                              => {}
             }
         }
@@ -47,6 +53,21 @@ impl Executor {
                 }
             },
             _                                   => false
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Function {
+    pub args: Vec<String>,
+    pub exps: Vec<Expression>
+}
+
+impl Function {
+    fn new(args: Vec<String>, exps: Vec<Expression>) -> Self {
+        Self { 
+            args,
+            exps
         }
     }
 }

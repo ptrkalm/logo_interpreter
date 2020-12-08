@@ -6,11 +6,10 @@ pub enum Expression {
     Left(Box<Expression>),
 
     Repeat(Box<Expression>, Vec<Expression>),
-    To(Box<Expression>, Vec<Expression>, Vec<Expression>),
-    Call(Box<Expression>, Vec<Expression>),
+    To(String, Vec<String>, Vec<Expression>),
+    Call(String, Vec<Expression>),
     
     Number(f32),
-    Ident(String),
     Var(String),
 
     If(Box<Expression>, Vec<Expression>),

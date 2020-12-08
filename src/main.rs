@@ -3,7 +3,7 @@ use turtle::Turtle;
 
 fn main() {
     let mut turtle = Turtle::new();
-    turtle.run(_IF);
+    turtle.run(_TO);
 }
 
 const _TO_RECT: &str = "
@@ -37,6 +37,16 @@ if 5 < 10 [
     ]
 ]
 ";
+
+const _TO: &str = "
+to line 
+    if 5 < 10 [
+        repeat 4 [
+            forward 20
+        ]
+    ]
+end
+line";
 
 /*
 [

@@ -4,14 +4,17 @@ pub mod interpreter;
 pub mod executor;
 
 use interpreter::Interpreter;
-use executor::Executor;
+use executor::{Executor, Function};
+use std::collections::HashMap;
 use image::{Rgb, RgbImage};
 use imageproc::drawing::draw_line_segment_mut;
+use expression::Expression;
 
 #[derive(Clone)]
 pub struct Turtle {
     interpreter: Interpreter,
     executor:    Executor,
+    functions:   HashMap<String, Function>,
     image:       RgbImage,
     position:    (f32, f32)
 }
@@ -21,6 +24,7 @@ impl Turtle {
         Self { 
             interpreter: Interpreter::new(),
             executor:    Executor::new(),
+            functions:   HashMap::new(),
             image:       RgbImage::new(512, 512),
             position:    (256.0, 256.0)
         }
@@ -41,5 +45,14 @@ impl Turtle {
             Rgb([255, 255, 255])
         );
         self.position = (self.position.0, self.position.1 - n);
+    }
+
+    fn add_function(&mut self, ident: String, function: Function) {
+        self.functions.insert(ident, function);
+    }
+
+    fn call_function(&mut self, ident: String, args: Vec<Expression>) {
+        let exps = self.functions.get(&ident).unwrap().exps.clone();
+        self.clone().executor.run(exps, self)
     }
 }
