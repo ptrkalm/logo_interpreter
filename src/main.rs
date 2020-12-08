@@ -39,14 +39,14 @@ if 5 < 10 [
 ";
 
 const _TO: &str = "
-to line 
+to line :len
     if 5 < 10 [
         repeat 4 [
-            forward 20
+            forward :len
         ]
     ]
 end
-line";
+line 50";
 
 /*
 [

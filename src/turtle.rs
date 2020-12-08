@@ -33,7 +33,7 @@ impl Turtle {
     pub fn run(&mut self, code: &str) {
         let ast = self.interpreter.run(code);
         println!("{:?}", ast);
-        self.clone().executor.run(ast, self);
+        self.clone().executor.run(ast, self, &None);
         self.image.save("output.jpg").unwrap();
     }
 
@@ -52,7 +52,17 @@ impl Turtle {
     }
 
     fn call_function(&mut self, ident: String, args: Vec<Expression>) {
-        let exps = self.functions.get(&ident).unwrap().exps.clone();
-        self.clone().executor.run(exps, self)
+        let function = self.functions.get(&ident).unwrap();
+        let exps = function.exps.clone();
+        let mut argz: HashMap<String, f32> = HashMap::new();
+        for arg in args.iter().zip(function.args.clone()) {
+            match arg {
+                (Expression::Number(n), ident) => { argz.insert(ident, *n); },
+                _ => {}
+            }
+        }
+
+
+        self.clone().executor.run(exps, self, &Some(argz));
     }
 }

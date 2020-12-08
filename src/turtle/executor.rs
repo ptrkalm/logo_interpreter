@@ -1,5 +1,6 @@
 use super::expression::Expression;
 use super::super::turtle::Turtle;
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct Executor;
@@ -8,26 +9,31 @@ impl Executor {
         Self {}
     }
 
-    pub fn run(&self, ast: Vec<Expression>, turtle: &mut Turtle) {
+    pub fn run(&self, ast: Vec<Expression>, turtle: &mut Turtle, args: &Option<HashMap<String, f32>>) {
         for e in ast {
             match e {
                 Expression::Forward(arg)       => {
                     match *arg {
                         Expression::Number(n) => turtle.forward(n),
-                        //TODO processing vars
+                        Expression::Var(id)   => {
+                            match args {
+                                Some(map) => turtle.forward(*map.get(&id).unwrap()),
+                                None      => panic!("Undefined parameter '{}'.", id)
+                            }
+                        }
                         _                     => {}
                     };
                 },
                 Expression::Repeat(count, exp) => {
                     if let Expression::Number(n) = *count {
                         for _ in 0..n as usize {
-                            self.run(exp.clone(), turtle);
+                            self.run(exp.clone(), turtle, args);
                         }
                     }
                 },
                 Expression::If(condition, exp) => {
                     if self.eval_condition(*condition) {
-                        self.run(exp, turtle);
+                        self.run(exp, turtle, args);
                     }
                 },
                 Expression::To(id, args, exp)  => {
