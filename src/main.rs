@@ -1,11 +1,9 @@
 mod turtle;
 use turtle::Turtle;
-//use image::{Rgb, RgbImage};
-//use imageproc::drawing::draw_line_segment_mut;
 
 fn main() {
     let mut turtle = Turtle::new();
-    turtle.execute(LINE_CODE);
+    turtle.run(LINE_CODE);
 }
 
 const _SQUARE_CODE: &str ="

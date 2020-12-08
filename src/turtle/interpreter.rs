@@ -3,15 +3,16 @@ use std::collections::VecDeque;
 use super::token::Token;
 use super::expression::Expression;
 
+#[derive(Clone)]
 pub struct Interpreter;
 impl Interpreter {
     pub fn new() -> Self {
         Self {}
     }
 
-    pub fn run(&self, code: &str) {
+    pub fn run(&self, code: &str) -> Vec<Expression> {
         let mut tokens = self.tokenize(code);
-        let exps   = self.interpret(&mut tokens);
+        self.interpret(&mut tokens)
     }
 
     fn tokenize(&self, code: &str) -> VecDeque<Token> {
