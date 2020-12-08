@@ -3,7 +3,7 @@ use turtle::Turtle;
 
 fn main() {
     let mut turtle = Turtle::new();
-    turtle.run(_TO);
+    turtle.run(_LINE_N);
 }
 
 const _TO_RECT: &str = "
@@ -47,6 +47,15 @@ to line :len
     ]
 end
 line 50";
+
+const _LINE_N: &str = "
+to nline :n 
+    repeat :n [
+        forward 10
+    ]
+end
+nline 10
+";
 
 /*
 [

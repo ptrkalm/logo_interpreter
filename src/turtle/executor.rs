@@ -2,7 +2,7 @@ use super::expression::Expression;
 use super::super::turtle::Turtle;
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct Executor;
 impl Executor {
     pub fn new() -> Self {
@@ -28,6 +28,17 @@ impl Executor {
                     if let Expression::Number(n) = *count {
                         for _ in 0..n as usize {
                             self.run(exp.clone(), turtle, args);
+                        }
+                    };
+                    if let Expression::Var(id)   = *count {
+                        match args {
+                            Some(map) => {
+                                let n = *map.get(&id).unwrap();
+                                for _ in 0..n as usize {
+                                    self.run(exp.clone(), turtle, args);
+                                }
+                            },
+                            None      => panic!("Undefined parameter '{}'.", id)
                         }
                     }
                 },

@@ -61,8 +61,6 @@ impl Turtle {
                 _ => {}
             }
         }
-
-
         self.clone().executor.run(exps, self, &Some(argz));
     }
 }
