@@ -17,26 +17,26 @@ impl Interpreter {
 
     fn tokenize(&self, code: &str) -> VecDeque<Token> {
         let mut tokens: VecDeque<Token> = VecDeque::new();
-        let regex = Regex::new(r":*[a-zA-Z0-9]+|[0-9]+|(\[|\]|<|>|\+|-|\*)").unwrap();
+        let regex = Regex::new(r":*[a-zA-Z]+[0-9]?+|-?\d+(\.\d+)?|(\[|\]|<|>|\+|-|\*|/)").unwrap();
         for token in regex.find_iter(code).map(|x| x.as_str()) {
             tokens.push_back(match token { 
-                "forward" => Token::Forward,
-                "back"    => Token::Back,
-                "right"   => Token::Right,
-                "left"    => Token::Left,
-                "repeat"  => Token::Repeat,
-                "["       => Token::LBracket,
-                "]"       => Token::RBracket,
-                "to"      => Token::To,
-                "end"     => Token::End,
-                "if"      => Token::If,
-                ">"       => Token::Gtr,
-                "<"       => Token::Less,
-                "+"       => Token::Add,
-                "-"       => Token::Sub,
-                "*"       => Token::Mul,
-                "/"       => Token::Div,
-                _         => {
+                "forward"  => Token::Forward,
+                "backward" => Token::Backward,
+                "right"    => Token::Right,
+                "left"     => Token::Left,
+                "repeat"   => Token::Repeat,
+                "["        => Token::LBracket,
+                "]"        => Token::RBracket,
+                "to"       => Token::To,
+                "end"      => Token::End,
+                "if"       => Token::If,
+                ">"        => Token::Gtr,
+                "<"        => Token::Less,
+                "+"        => Token::Add,
+                "-"        => Token::Sub,
+                "*"        => Token::Mul,
+                "/"        => Token::Div,
+                _          => {
                     match token.parse::<f32>() {
                         Ok(n) => Token::Number(n),
                         Err(_) => {
@@ -50,6 +50,7 @@ impl Interpreter {
                 }
             });
         }
+        println!("{:?}", tokens);
         tokens
     }
 
@@ -70,10 +71,10 @@ impl Interpreter {
         while !tokens.is_empty() {
             let next = tokens.pop_front().unwrap();
             match next {
-                Token::Forward   => exps.push(Expression::Forward(Box::new(self.build_arg(tokens)))),
-                Token::Back      => exps.push(Expression::Back   (Box::new(self.build_arg(tokens)))),
-                Token::Right     => exps.push(Expression::Right  (Box::new(self.build_arg(tokens)))),
-                Token::Left      => exps.push(Expression::Left   (Box::new(self.build_arg(tokens)))),
+                Token::Forward   => exps.push(Expression::Forward (Box::new(self.build_arg(tokens).unwrap()))),
+                Token::Backward  => exps.push(Expression::Backward(Box::new(self.build_arg(tokens).unwrap()))),
+                Token::Right     => exps.push(Expression::Right   (Box::new(self.build_arg(tokens).unwrap()))),
+                Token::Left      => exps.push(Expression::Left    (Box::new(self.build_arg(tokens).unwrap()))),
                 Token::Repeat    => exps.push(self.build_repeat(tokens, stack)),
                 Token::If        => exps.push(self.build_if    (tokens, stack)),
                 Token::To        => exps.push(self.build_to    (tokens, stack)),
@@ -87,35 +88,36 @@ impl Interpreter {
         exps
     }
     
-    fn build_var(&self, tokens: &mut VecDeque<Token>) -> Expression {
+    fn build_var(&self, tokens: &mut VecDeque<Token>) -> Option<Expression> {
         match tokens.pop_front() {
-            Some(Token::Number(x)) => Expression::Number(x),
-            Some(Token::Var(x))    => Expression::Var(x),
-            Some(x)                => panic!("Unexpected token '{:?}'. Expected variable.", x),
-            None                   => panic!("Expected variable, got nothing.")
+            Some(Token::Number(x)) => Some(Expression::Number(x)),
+            Some(Token::Var(x))    => Some(Expression::Var(x)),
+            _                      => None 
+            //Some(x)                => panic!("Unexpected token '{:?}'. Expected variable.", x),
+            //None                   => panic!("Expected variable, got nothing.")
         } 
     }
     
-    fn build_arg(&self, tokens: &mut VecDeque<Token>) -> Expression {
+    fn build_arg(&self, tokens: &mut VecDeque<Token>) -> Option<Expression> {
         let op = tokens.get(1);
         match op {
             Some(Token::Add) => self.build_math(tokens, Box::new(Expression::Add)),
             Some(Token::Sub) => self.build_math(tokens, Box::new(Expression::Sub)),
             Some(Token::Mul) => self.build_math(tokens, Box::new(Expression::Mul)),
             Some(Token::Div) => self.build_math(tokens, Box::new(Expression::Div)),
-            _                => self.build_var(tokens)
+            Some(_) | None   => self.build_var(tokens),
         }
     }
     
-    fn build_math(&self, tokens: &mut VecDeque<Token>, op: Box<Expression>) -> Expression {
-        let lhs = Box::new(self.build_var(tokens));
+    fn build_math(&self, tokens: &mut VecDeque<Token>, op: Box<Expression>) -> Option<Expression> {
+        let lhs = Box::new(self.build_var(tokens).unwrap());
         tokens.pop_front();
-        let rhs = Box::new(self.build_var(tokens));
+        let rhs = Box::new(self.build_var(tokens).unwrap());
     
-        Expression::Math(lhs, op, rhs)
+        Some(Expression::Math(lhs, op, rhs))
     }
     fn build_repeat(&self, tokens: &mut VecDeque<Token>, stack: &mut VecDeque<Token>) -> Expression {
-        let count = Box::new(self.build_arg(tokens));
+        let count = Box::new(self.build_arg(tokens).unwrap());
         stack.push_back(Token::LBracket);
         match tokens.pop_front() {
             Some(Token::LBracket) => Expression::Repeat(count, self.build(tokens, stack)),
@@ -136,9 +138,9 @@ impl Interpreter {
     
     fn build_condition(&self, tokens: &mut VecDeque<Token>) -> Expression {
         Expression::Condition(
-            Box::new(self.build_arg(tokens)),
+            Box::new(self.build_arg(tokens).unwrap()),
             Box::new(self.build_logical_op(tokens)),
-            Box::new(self.build_arg(tokens))
+            Box::new(self.build_arg(tokens).unwrap())
         )
     }
     
@@ -178,11 +180,17 @@ impl Interpreter {
         
         loop {
             match tokens.get(0) {
+                Some(Token::Var(_)) | Some(Token::Number(_)) => {
+                    args.push(self.build_arg(tokens).unwrap())
+                },
+                _ => break
+            };
+            /*match tokens.get(0) {
                 Some(Token::Var(x))    => args.push(Expression::Var(x.to_string())),
                 Some(Token::Number(x)) => args.push(Expression::Number(*x)),
                 _                      => break
-            }
-            tokens.pop_front();
+            }*/
+            //tokens.pop_front();
         }
     
         Expression::Call(name, args)

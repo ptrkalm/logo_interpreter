@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    Forward, Back, Right, Left,
+    Forward, Backward,
+    Right, Left,
     Repeat, LBracket, RBracket,
     To, End,
     Number(f32), 
