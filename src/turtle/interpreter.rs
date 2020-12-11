@@ -11,19 +11,19 @@ impl Interpreter {
     }
 
     pub fn run(&self, code: &str) -> Vec<Expression> {
-        let mut tokens = self.tokenize(code);
+        let mut tokens = self.tokenize(code.to_lowercase().as_str());
         self.interpret(&mut tokens)
     }
 
     fn tokenize(&self, code: &str) -> VecDeque<Token> {
         let mut tokens: VecDeque<Token> = VecDeque::new();
-        let regex = Regex::new(r":*[a-zA-Z]+[0-9]?+|-?\d+(\.\d+)?|(\[|\]|<|>|\+|-|\*|/)").unwrap();
+        let regex = Regex::new(r":*[a-zA-Z]+[0-9]?+|-?\d+(\.\d+)?|(\[|\]|!=|==|<|>|\+|-|\*|/)").unwrap();
         for token in regex.find_iter(code).map(|x| x.as_str()) {
             tokens.push_back(match token { 
-                "forward"  => Token::Forward,
-                "backward" => Token::Backward,
-                "right"    => Token::Right,
-                "left"     => Token::Left,
+                "forward"  | "fd" => Token::Forward,
+                "backward" | "bk" => Token::Back,
+                "right"    | "rt" => Token::Right,
+                "left"     | "lt" => Token::Left,
                 "repeat"   => Token::Repeat,
                 "["        => Token::LBracket,
                 "]"        => Token::RBracket,
@@ -32,6 +32,8 @@ impl Interpreter {
                 "if"       => Token::If,
                 ">"        => Token::Gtr,
                 "<"        => Token::Less,
+                "=="       => Token::Eq,
+                "!="       => Token::Neq,
                 "+"        => Token::Add,
                 "-"        => Token::Sub,
                 "*"        => Token::Mul,
@@ -72,7 +74,7 @@ impl Interpreter {
             let next = tokens.pop_front().unwrap();
             match next {
                 Token::Forward   => exps.push(Expression::Forward (Box::new(self.build_arg(tokens).unwrap()))),
-                Token::Backward  => exps.push(Expression::Backward(Box::new(self.build_arg(tokens).unwrap()))),
+                Token::Back      => exps.push(Expression::Back    (Box::new(self.build_arg(tokens).unwrap()))),
                 Token::Right     => exps.push(Expression::Right   (Box::new(self.build_arg(tokens).unwrap()))),
                 Token::Left      => exps.push(Expression::Left    (Box::new(self.build_arg(tokens).unwrap()))),
                 Token::Repeat    => exps.push(self.build_repeat(tokens, stack)),
@@ -93,8 +95,6 @@ impl Interpreter {
             Some(Token::Number(x)) => Some(Expression::Number(x)),
             Some(Token::Var(x))    => Some(Expression::Var(x)),
             _                      => None 
-            //Some(x)                => panic!("Unexpected token '{:?}'. Expected variable.", x),
-            //None                   => panic!("Expected variable, got nothing.")
         } 
     }
     
@@ -148,6 +148,8 @@ impl Interpreter {
         match tokens.pop_front() {
             Some(Token::Less) => Expression::Less, 
             Some(Token::Gtr)  => Expression::Gtr,
+            Some(Token::Eq)   => Expression::Eq,
+            Some(Token::Neq)  => Expression::Neq,
             Some(other)       => panic!("Unexpected token '{:?}'. Expected logical operator.", other),
             None              => panic!("Expected logical operator, got nothing.") 
         }
@@ -185,12 +187,6 @@ impl Interpreter {
                 },
                 _ => break
             };
-            /*match tokens.get(0) {
-                Some(Token::Var(x))    => args.push(Expression::Var(x.to_string())),
-                Some(Token::Number(x)) => args.push(Expression::Number(*x)),
-                _                      => break
-            }*/
-            //tokens.pop_front();
         }
     
         Expression::Call(name, args)

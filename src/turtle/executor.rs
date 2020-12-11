@@ -12,10 +12,11 @@ impl Executor {
     pub fn run(&self, ast: Vec<Expression>, turtle: &mut Turtle, args: &Option<HashMap<String, f32>>) {
         for e in ast {
             match e {
-                Expression::Forward(arg)        => turtle.forward(self.eval_arg(arg, args)),
-                Expression::Right  (arg)        => turtle.right  (self.eval_arg(arg, args)),
-                Expression::Left   (arg)        => turtle.left   (self.eval_arg(arg, args)),
-                Expression::Repeat (count, exp) => {
+                Expression::Forward (arg)        => turtle.forward (self.eval_arg(arg, args)),
+                Expression::Back    (arg)        => turtle.back    (self.eval_arg(arg, args)),
+                Expression::Right   (arg)        => turtle.right   (self.eval_arg(arg, args)),
+                Expression::Left    (arg)        => turtle.left    (self.eval_arg(arg, args)),
+                Expression::Repeat  (count, exp) => {
                     let n = self.eval_arg(count, args);
                     for _ in 0..n as usize {
                         self.run(exp.clone(), turtle, args);
@@ -41,6 +42,8 @@ impl Executor {
                 match *op {
                     Expression::Less => a < b,
                     Expression::Gtr  => a > b,
+                    Expression::Eq   => a == b,
+                    Expression::Neq  => a != b,
                     _ => false
                 }
             },

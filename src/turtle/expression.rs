@@ -1,7 +1,7 @@
 #[derive(Debug, Clone)]
 pub enum Expression {
     Forward (Box<Expression>),
-    Backward(Box<Expression>),
+    Back    (Box<Expression>),
     Right   (Box<Expression>),
     Left    (Box<Expression>),
 
@@ -14,7 +14,7 @@ pub enum Expression {
 
     If       (Box<Expression>, Vec<Expression>),
     Condition(Box<Expression>, Box<Expression>, Box<Expression>),
-    Less, Gtr,
+    Less, Gtr, Eq, Neq,
 
     Math(Box<Expression>, Box<Expression>, Box<Expression>),
     Add, Sub, Mul, Div
