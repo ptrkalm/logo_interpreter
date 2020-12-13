@@ -1,5 +1,6 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
+    Penup, Pendown, Setcolor,
     Forward, Back,
     Right, Left,
     Repeat, LBracket, RBracket,

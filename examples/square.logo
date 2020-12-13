@@ -1,0 +1,7 @@
+TO SQUARE :LEN
+    REPEAT 4 [
+        FORWARD :LEN
+        RIGHT 90
+    ]
+END
+SQUARE 100

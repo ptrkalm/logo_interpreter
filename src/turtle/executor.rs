@@ -1,6 +1,7 @@
 use super::expression::Expression;
 use super::super::turtle::Turtle;
 use std::collections::HashMap;
+use image::Rgb;
 
 #[derive(Clone, Copy)]
 pub struct Executor;
@@ -12,6 +13,9 @@ impl Executor {
     pub fn run(&self, ast: Vec<Expression>, turtle: &mut Turtle, args: &Option<HashMap<String, f32>>) {
         for e in ast {
             match e {
+                Expression::Penup                => turtle.pendown = false,
+                Expression::Pendown              => turtle.pendown = true,
+                Expression::Setcolor(r, g, b)    => turtle.setcolor(self.eval_color(r, g, b, args)),
                 Expression::Forward (arg)        => turtle.forward (self.eval_arg(arg, args)),
                 Expression::Back    (arg)        => turtle.back    (self.eval_arg(arg, args)),
                 Expression::Right   (arg)        => turtle.right   (self.eval_arg(arg, args)),
@@ -32,6 +36,14 @@ impl Executor {
                 _                              => {}
             }
         }
+    }
+
+    fn eval_color(&self, r: Box<Expression>, g: Box<Expression>, b: Box<Expression>, args: &Option<HashMap<String, f32>>) -> Rgb<u8> {
+        let r = self.eval_arg(r, args) as u8;
+        let g = self.eval_arg(g, args) as u8;
+        let b = self.eval_arg(b, args) as u8;
+
+        Rgb([r, g, b])
     }
 
     fn eval_condition(&self, condition: Expression, args: &Option<HashMap<String, f32>>) -> bool {

@@ -18,7 +18,9 @@ pub struct Turtle {
     functions:   HashMap<String, Function>,
     image:       RgbImage,
     position:    (f32, f32),
-    angle:       f32
+    angle:       f32,
+    color:       Rgb<u8>,
+    pendown:     bool,
 }
 
 impl Turtle {
@@ -29,38 +31,47 @@ impl Turtle {
             functions:   HashMap::new(),
             image:       RgbImage::new(512, 512),
             position:    (256.0, 256.0),
-            angle:       0.0
+            angle:       0.0,
+            color:       Rgb([255, 255, 255]),
+            pendown:     true
         }
     }
 
-    pub fn run(&mut self, code: &str) {
+    pub fn run(&mut self, code: String) {
         let ast = self.interpreter.run(code);
-        println!("{:?}", ast);
         self.clone().executor.run(ast, self, &None);
         self.image.save("output.jpg").unwrap();
+    }
+
+    fn setcolor(&mut self, color: Rgb<u8>) {
+        self.color = color;
     }
 
     fn forward(&mut self, n: f32) {
         let x = self.position.0 + (self.angle * PI / 180.0).sin() * n;
         let y = self.position.1 - (self.angle * PI / 180.0).cos() * n;
-        draw_line_segment_mut(
-            &mut self.image,
-            self.position,
-            (x, y),
-            Rgb([255, 255, 255])
-        );
+        if self.pendown {
+            draw_line_segment_mut(
+                &mut self.image,
+                self.position,
+                (x, y),
+                self.color
+            );
+        }   
         self.position = (x, y);
     }
 
     fn back(&mut self, n: f32) {
         let x = self.position.0 - (self.angle * PI / 180.0).sin() * n;
         let y = self.position.1 + (self.angle * PI / 180.0).cos() * n;
-        draw_line_segment_mut(
-            &mut self.image,
-            self.position,
-            (x, y),
-            Rgb([255, 255, 255])
-        );
+        if self.pendown {
+            draw_line_segment_mut(
+                &mut self.image,
+                self.position,
+                (x, y),
+                self.color
+            );
+        }   
         self.position = (x, y);
     }
 

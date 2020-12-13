@@ -1,0 +1,53 @@
+TO RECT :A :B
+    REPEAT 2 [
+        FD :A
+        RT 90
+        FD :B
+        RT 90
+    ]
+END
+TO HOUSE
+    RECT 100 100
+
+    SETCOLOR 0 255 255
+    RT 90
+    FD 40
+    LT 90
+    RECT 40 20
+
+    PENUP
+    LT 90
+    FD 30
+    RT 90
+    FD 60
+
+
+    SETCOLOR 0 0 255
+    PENDOWN
+    RECT 20 20
+
+    PENUP
+    RT 90
+    FD 60
+    LT 90
+    
+    PENDOWN
+    RECT 20 20
+
+    PENUP
+    FD 40
+    RT 90
+    FD 30
+    LT 120
+
+    SETCOLOR 255 0 0
+    PENDOWN
+    FD 100
+    LT 120
+    FD 100
+
+    LT 30
+    FD 100
+    RT 180
+END
+HOUSE

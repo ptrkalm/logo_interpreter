@@ -1,5 +1,8 @@
 #[derive(Debug, Clone)]
 pub enum Expression {
+    Penup, Pendown,
+    Setcolor(Box<Expression>, Box<Expression>, Box<Expression>),
+
     Forward (Box<Expression>),
     Back    (Box<Expression>),
     Right   (Box<Expression>),

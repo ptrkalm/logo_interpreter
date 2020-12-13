@@ -1,0 +1,12 @@
+PU BK 200 LT 90 FD 100 RT 90 PD
+TO FERN :SIZE :SIGN
+    if :SIZE > 1 [
+        FD :SIZE
+        RT 70 * :SIGN FERN :SIZE * 0.5 :SIGN * -1 LT 70 * :SIGN
+        FD :SIZE
+        LT 70 * :SIGN fern :SIZE * 0.5 :SIGN RT 70 * :SIGN
+        RT 7 * :SIGN fern :SIZE - 1 :SIGN LT 7 * :SIGN
+        BK :SIZE * 2
+    ]
+END
+FERN 25 1

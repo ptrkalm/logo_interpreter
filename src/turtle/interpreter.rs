@@ -10,7 +10,7 @@ impl Interpreter {
         Self {}
     }
 
-    pub fn run(&self, code: &str) -> Vec<Expression> {
+    pub fn run(&self, code: String) -> Vec<Expression> {
         let mut tokens = self.tokenize(code.to_lowercase().as_str());
         self.interpret(&mut tokens)
     }
@@ -19,12 +19,15 @@ impl Interpreter {
         let mut tokens: VecDeque<Token> = VecDeque::new();
         let regex = Regex::new(r":*[a-zA-Z]+[0-9]?+|-?\d+(\.\d+)?|(\[|\]|!=|==|<|>|\+|-|\*|/)").unwrap();
         for token in regex.find_iter(code).map(|x| x.as_str()) {
-            tokens.push_back(match token { 
+            tokens.push_back(match token {
+                "penup"    | "pu" => Token::Penup,
+                "pendown"  | "pd" => Token::Pendown,
+                "setcolor" | "sc" => Token::Setcolor,
                 "forward"  | "fd" => Token::Forward,
-                "backward" | "bk" => Token::Back,
+                "back"     | "bk" => Token::Back,
                 "right"    | "rt" => Token::Right,
                 "left"     | "lt" => Token::Left,
-                "repeat"   => Token::Repeat,
+                "repeat"   | "rp" => Token::Repeat,
                 "["        => Token::LBracket,
                 "]"        => Token::RBracket,
                 "to"       => Token::To,
@@ -52,7 +55,6 @@ impl Interpreter {
                 }
             });
         }
-        println!("{:?}", tokens);
         tokens
     }
 
@@ -73,6 +75,9 @@ impl Interpreter {
         while !tokens.is_empty() {
             let next = tokens.pop_front().unwrap();
             match next {
+                Token::Penup     => exps.push(Expression::Penup),
+                Token::Pendown   => exps.push(Expression::Pendown),
+                Token::Setcolor  => exps.push(self.build_set_color(tokens)),
                 Token::Forward   => exps.push(Expression::Forward (Box::new(self.build_arg(tokens).unwrap()))),
                 Token::Back      => exps.push(Expression::Back    (Box::new(self.build_arg(tokens).unwrap()))),
                 Token::Right     => exps.push(Expression::Right   (Box::new(self.build_arg(tokens).unwrap()))),
@@ -88,6 +93,13 @@ impl Interpreter {
         }
     
         exps
+    }
+
+    fn build_set_color(&self, tokens: &mut VecDeque<Token>) -> Expression {
+        let r = Box::new(self.build_arg(tokens).unwrap());
+        let g = Box::new(self.build_arg(tokens).unwrap());
+        let b = Box::new(self.build_arg(tokens).unwrap());
+        Expression::Setcolor(r, g, b)
     }
     
     fn build_var(&self, tokens: &mut VecDeque<Token>) -> Option<Expression> {

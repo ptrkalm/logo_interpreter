@@ -1,0 +1,21 @@
+to SIDE :LEN :DEP
+    IF :DEP != 0 [
+        SIDE :LEN / 3 :DEP - 1
+        LT 60
+        SIDE :LEN / 3 :DEP - 1
+        RT 120
+        SIDE :LEN / 3 :DEP - 1
+        LT 60
+        SIDE :LEN / 3 :DEP - 1
+    ]
+    IF :DEP == 0 [
+        FD :LEN
+    ]
+END
+TO SNOWFLAKE :LEN :DEP
+    REPEAT 3 [
+        SIDE :LEN :DEP
+        RT 120
+    ]
+END
+SNOWFLAKE 200 4

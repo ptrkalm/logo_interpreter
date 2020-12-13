@@ -1,0 +1,11 @@
+BK 100
+TO STAR :SIZE
+    IF :SIZE >= 10 [
+        REPEAT 5 [
+            FD :SIZE
+            STAR: :SIZE * 0.3
+            RT 144
+        ]
+    ]
+END
+STAR 200
