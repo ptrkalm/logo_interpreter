@@ -62,17 +62,7 @@ impl Turtle {
     }
 
     fn back(&mut self, n: f32) {
-        let x = self.position.0 - (self.angle * PI / 180.0).sin() * n;
-        let y = self.position.1 + (self.angle * PI / 180.0).cos() * n;
-        if self.pendown {
-            draw_line_segment_mut(
-                &mut self.image,
-                self.position,
-                (x, y),
-                self.color
-            );
-        }   
-        self.position = (x, y);
+        self.forward(-n);
     }
 
     fn right(&mut self, n: f32) {
@@ -80,7 +70,7 @@ impl Turtle {
     }
 
     fn left(&mut self, n: f32) {
-        self.angle = (((self.angle - n).floor() as i32) % 360) as f32 + self.angle.fract();
+        self.right(-n);
     }
 
     fn add_function(&mut self, ident: String, function: Function) {
